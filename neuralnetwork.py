@@ -15,6 +15,19 @@ class neuralnetwork:
         self.params['W2'] = weight_init_std * np.random.randn(hidden_size, output_size)
         self.params['b2'] = np.zeros(output_size)
 
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+
+    def softmax(x):
+        if x.ndim == 2:
+            x = x.T
+            x = x - np.max(x, axis=0)
+            y = np.exp(x) / np.sum(np.exp(x), axis=0)
+            return y.T 
+
+        x = x - np.max(x)
+        return np.exp(x) / np.sum(np.exp(x))
+
 
     def calculate_loss(self, X, y):
         W1 = self.params['W1']
@@ -22,9 +35,9 @@ class neuralnetwork:
         W2 = self.params['W2']
         b2 = self.params['b2'] 
 
-        a1 = X.dot(W1) + b1 
+        a1 = np.dot(X, W1) + b1 
         z1 = np.tanh(a1) 
-        a2 = z1.dot(W2) + b2 
+        a2 = np.dot(z1, W2) + b2 
         exp_scores = np.exp(a2) 
         probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True) 
         # Calculating the loss 
@@ -39,10 +52,12 @@ class neuralnetwork:
         # Forward propagation 
         a1 = np.dot(x, W1) + b1 
         z1 = np.tanh(a1) 
-        a2 = np.dot(z1, W2) + b2 
-        exp_scores = np.exp(a2) 
-        probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True) 
-        return np.argmax(probs, axis=1) 
+        a2 = np.dot(z1, W2) + b2
+        y = self.softmax(a2)
+        return y 
+        #exp_scores = np.exp(a2) 
+        #probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True) 
+        #return np.argmax(probs, axis=1) 
 
     def train(iters_num = 20000):
         for i in range(0, iters_num):

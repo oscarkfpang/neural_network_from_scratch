@@ -4,7 +4,8 @@ import pylab
 import sklearn
 import sklearn.datasets
 import sklearn.linear_model
-
+import pickle
+import os.path
 from neuralnetworkv2 import *
 
 def layer_size(X,Y):
@@ -19,7 +20,7 @@ def layer_size(X,Y):
         n_y -- the size of the output layer
     """
     n_x=X.shape[0]
-    n_h=4
+    n_h= 6
     n_y=Y.shape[0]
     return (n_x,n_h,n_y)
 
@@ -84,15 +85,24 @@ print("the training examples:" +str(m))
 n_x, n_h, n_y = layer_size(X,Y)
 
 nn = neuralnetwork(n_x, n_h, n_y)
-nn.train(X, Y, m, debug = True)
+
+if os.path.isfile('nn_weights.dat'):
+    print("Found existing weights. Loading...")
+    weights = open('nn_weights.dat', 'rb')
+    nn.input(weights)
+else:
+    print("Train new weights using data...")
+    nn.train(X, Y, m, debug = True)
+
 #prediction = nn.predict(X)
 
 plot_decision_boundary(lambda x: nn.predict(x.T), X, Y)
-plt.title("Decision Boundary for hidden layer size " + str(4))
+plt.title("Decision Boundary for hidden layer size " + str(nn.getsize()[1]))
 pylab.show()
 
 predictions=nn.predict(X)
 print ('Accuracy: %d' % float((np.dot(Y,predictions.T) + np.dot(1-Y,1-predictions.T))/float(Y.size)*100) + '%')
 
-
+print ('Saving weights...')
+nn.output()
 
