@@ -3,7 +3,7 @@ import pickle
 
 class neuralnetwork:
 
-    def __init__(self, input_size, hidden_size, output_size, weight_init_std=0.01, learning_rate = 0.12):
+    def __init__(self, input_size, hidden_size, output_size, weight_init_std=0.01, learning_rate=0.12):
         self.params = {}
         np.random.seed(2)
         self.params['W1'] = weight_init_std * np.random.randn(hidden_size, input_size)
@@ -13,7 +13,7 @@ class neuralnetwork:
 
         self.cost = []
         self.m = 0
-        self.learning_rate = 0.12
+        self.learning_rate = learning_rate
 
         self.cache = {}
         self.trained = False
@@ -31,6 +31,12 @@ class neuralnetwork:
     def sigmoid_prime(self, x):
         return np.multiply(self.sigmoid(x) , (1 - self.sigmoid(x)))
 
+    def tanh(self, x):
+        return np.tanh(x)
+
+    def tanh_prime(self, x):
+        return (1 - self.tanh(x)**2)
+
     def softmax(self, x):
         if x.ndim == 2:
             x = x.T
@@ -46,24 +52,31 @@ class neuralnetwork:
 
         # Forward propagation 
         Z1 = np.dot(W1, X) + b1 
-        A1 = self.sigmoid(Z1)
+        #A1 = self.sigmoid(Z1)
+        A1 = self.tanh(Z1)
         Z2 = np.dot(W2, A1) + b2
         A2 = self.sigmoid(Z2) 
 
+        # save Z1, A1, Z2 and A2 in cache for later use
         self.cache = {"Z1": Z1, "A1": A1, "Z2": Z2, "A2": A2}
-        # softmax
-        #exp_scores = np.exp(a2) 
-        #probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True) 
-        #return np.argmax(probs, axis=1) 
-        #return A2
 
-    def compute_cost(self, Y):
+    def cross_entropy_loss(self, Y_hat):
+        """
+        computes cross entropy loss function
+        input: Y_hat, vector of results predicted by our neural network
+        output: J, cost value of Y_hat
+        """
         A2 = self.cache["A2"]
         assert self.m != 0
-        J = -1/self.m * np.sum( np.multiply(Y, np.log(A2)) + np.multiply((1 - Y), np.log(1 - A2) ) )
+
+        ### Your code here (~1-2 lines) ###
+        J = -1/self.m * np.sum( np.multiply(Y_hat, np.log(A2)) + np.multiply((1 - Y_hat), np.log(1 - A2) ) )
         
-        self.cost.append(np.squeeze(J))
-        return np.squeeze(J)
+        # repack J into a scalar, e.g. not [[19.0]]
+        J = np.squeeze(J)
+        # save J in a list for plotting loss function graph
+        self.cost.append(J)
+        return J
         
 
     def backward(self, X, Y):
@@ -75,21 +88,38 @@ class neuralnetwork:
         assert self.m != 0
 
         # Backward propagation
+        ### Your code here (6 lines) ###
         dZ2 = A2 - Y
         dW2 = np.dot(dZ2, A1.T) / self.m
         db2 = np.sum(dZ2, axis = 1, keepdims = True) / self.m
-        dZ1 = np.multiply(np.dot(W2.T, dZ2) , self.sigmoid_prime(Z1))
+        dZ1 = np.multiply(np.dot(W2.T, dZ2) , self.tanh_prime(Z1))
         dW1 = np.dot(dZ1, X.T) / self.m
         db1 = np.sum(dZ1, axis = 1, keepdims = True) / self.m
 
+        return {"dW1":dW1, "db1":db1, "dW2":dW2, "db2":db2}
+
+    def update(self, gradients):
+        """
+        update the parameters of W1, b1, W2 and b2 using the gradients 
+        computed from back propagation and the learning rate alpha
+        input: gradients dictionary from back propagation
+        """
+        # load parameters
+        W1, b1, W2, b2 = self.params['W1'], self.params['b1'], self.params['W2'], self.params['b2'] 
+        # load gradients from back propagation
+        dW1, db1, dW2, db2 = gradients['dW1'], gradients['db1'], gradients['dW2'], gradients['db2'],
+
+        # Update Parameters
+        ### Your code here (4 lines) ###
         W1 = W1 - self.learning_rate * dW1
         b1 = b1 - self.learning_rate * db1
         W2 = W2 - self.learning_rate * dW2
-        b2 = b2 - self.learning_rate * db2
-
+        b2 = b2 - self.learning_rate * db2        
+        
         self.params = {"W1": W1, "b1": b1, "W2": W2, "b2": b2}
 
-    def train(self, X, Y, m, num_iterations = 40000, debug = False):
+    def train(self, X, Y, m, num_iterations = 20000, debug = False):
+        self.cost = []
         self.m = m
         assert self.m != 0
 
@@ -98,11 +128,13 @@ class neuralnetwork:
 
         for i in range(0, num_iterations):
             self.forward(X)
-            cost = self.compute_cost(Y)
-            self.backward(X, Y)
+            J = self.cross_entropy_loss(Y)
+            gradients = self.backward(X, Y)
+            self.update(gradients)
 
+            self.cost.append(J)
             if debug and i%500==0:
-                print("cost after iteration %i: %2.8f"%(i, cost))
+                print("cost after iteration %i: %2.8f"%(i, J))
 
         print("Training is completed!")
         self.trained = True
@@ -129,4 +161,7 @@ class neuralnetwork:
         self.trained = True
 
     def getsize(self):
-        return self.input_size, self.hidden_size, self.output_size,
+        return self.input_size, self.hidden_size, self.output_size
+
+    def getcostlist(self):
+        return self.cost

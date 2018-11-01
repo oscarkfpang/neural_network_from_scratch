@@ -5,8 +5,11 @@ import sklearn
 import sklearn.datasets
 import sklearn.linear_model
 import pickle
+import sys
 import os.path
+from argparse import ArgumentParser
 from neuralnetworkv2 import *
+
 
 def layer_size(X,Y):
     """
@@ -68,9 +71,21 @@ def plot_decision_boundary(model, X, y):
     plt.xlabel('x1')
     plt.scatter(X[0, :], X[1, :], c=y.reshape(X[0,:].shape), cmap=plt.cm.Spectral)
 
+parser = ArgumentParser()
+parser.add_argument("--output", help="output trained weights", action="store_true")
+parser.add_argument("-d", "--dataset", help="choose dataset: moon / planar", dest="dataset", default="moon")
+parser.add_argument("-lr", "--learningrate", help="define the learning rate", dest="lr", type=float, default=0.12)
+parser.add_argument("-i", "--iteration", help="define the learning rate", dest="iter", type=int, default=20000)
+args = parser.parse_args()
 
-#X,Y=load_planar_dataset()
-X, Y = load_moon_dataset()
+if str(args.dataset) == "moon":
+    X, Y = load_moon_dataset()
+    #print(args.dataset)
+elif str(args.dataset) == "planar":
+    X, Y = load_planar_dataset()
+else:
+    print("Unrecognized dataset parameter! Exit now.")
+    sys.exit(1)
 
 
 plt.show()
@@ -84,7 +99,7 @@ print("the training examples:" +str(m))
 
 n_x, n_h, n_y = layer_size(X,Y)
 
-nn = neuralnetwork(n_x, n_h, n_y)
+nn = neuralnetwork(n_x, n_h, n_y, learning_rate=args.lr)
 
 if os.path.isfile('nn_weights.dat'):
     print("Found existing weights. Loading...")
@@ -92,17 +107,28 @@ if os.path.isfile('nn_weights.dat'):
     nn.input(weights)
 else:
     print("Train new weights using data...")
-    nn.train(X, Y, m, debug = True)
-
-#prediction = nn.predict(X)
+    nn.train(X, Y, m, num_iterations = args.iter, debug = True)
 
 plot_decision_boundary(lambda x: nn.predict(x.T), X, Y)
 plt.title("Decision Boundary for hidden layer size " + str(nn.getsize()[1]))
-pylab.show()
+plt.show()
+
+
+print ('Plotting cost function over iteration')
+cost = nn.getcostlist()
+plt.plot(cost)
+plt.title("Cost function over iteration")
+plt.ylabel('cost')
+plt.xlabel('iteration')
+plt.show()
+
 
 predictions=nn.predict(X)
 print ('Accuracy: %d' % float((np.dot(Y,predictions.T) + np.dot(1-Y,1-predictions.T))/float(Y.size)*100) + '%')
 
-print ('Saving weights...')
-nn.output()
+if args.output:
+    print ('Saving weights...')
+    nn.output()
+
+
 
